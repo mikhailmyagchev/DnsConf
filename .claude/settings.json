@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "mattpocock-skills": {
+      "source": {
+        "source": "github",
+        "repo": "mattpocock/skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "mattpocock-skills@mattpocock-skills": true
+  }
+}
