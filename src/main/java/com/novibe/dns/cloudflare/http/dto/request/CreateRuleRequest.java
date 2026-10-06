@@ -1,7 +1,7 @@
 package com.novibe.dns.cloudflare.http.dto.request;
 
 import com.google.gson.annotations.SerializedName;
-import com.novibe.common.base_dto.Jsonable;
+import com.novibe.common.util.Jsonable;
 import lombok.Builder;
 
 import java.util.List;
@@ -12,6 +12,7 @@ public record CreateRuleRequest(String name,
                                 String action,
                                 List<String> filters,
                                 String traffic,
+                                int precedence,
                                 @SerializedName("rule_settings")
                                 RuleSettings ruleSettings,
                                 boolean enabled)

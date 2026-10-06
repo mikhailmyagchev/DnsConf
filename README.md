@@ -1,38 +1,68 @@
 🌐 Languages: [󠁧󠁢󠁥󠁮󠁧󠁿**English**](README.md) | [**Русский**](README.ru.md)
 
+[![Last Build](../../actions/workflows/github_action.yml/badge.svg?branch=main)](../../actions/workflows/github_action.yml)<br>
+
 # DNS Block&Redirect Configurer
+
 **Allows to set Redirect and Block rules to your Cloudflare and NextDNS accounts.**
 
-**Ready-to-run via GitHub Actions.** [Video guide](#step-by-step-video-guide-redirect-for-nextdns)
+**Ready-to-run via GitHub Actions.** [Video guide](https://www.youtube.com/watch?v=vbAXM_xAL5I)
 
-[General comparison: Cloudflare vs NextDNS](#cloudflare-vs-nextdns)
+## Comparison of Free Plans: NextDNS vs Cloudflare
 
-[Setup credentials: Cloudflare](#cloudflare-credentials-setup)
+|                                  | NextDNS                                                         | Cloudflare                                                                                                           |
+|----------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **DNS Query Limit**              | 300,000 per month                                               | 100,000 per day                                                                                                      |
+| **Billing information required** | No                                                              | Yes                                                                                                                  |
+| **IPv4 Restrictions**            | DNS queries are limited to a single IP address (can be changed) | DNS queries are strictly limited to a single IP address (automatically assigned by Cloudflare and cannot be changed) |
+| **DoH / DoT / IPv6**             | Unlimited                                                       | Unlimited                                                                                                            |
+| **Setup API Limits**             | 60 requests per minute                                          | Unlimited                                                                                                            |
+| **General Limitations**          | None                                                            | Infrastructure is blocked by Roskomnadzor (availability issues in Russia)                                            |
+| **Advantages**                   | Built-in ad and tracker blocking options                        | More reliable and fast infrastructure                                                                                |
 
-[Setup credentials: NextDNS](#nextdns-credentials-setup)
+In summary: 
+- If you are located in Russia, **NextDNS** is your only viable option due to Roskomnadzor restrictions.
+- If you are in other country than Russia, and you're ok with a credit card gate, **Cloudflare** offers more generous limits on the free plan. 
+Tracker and ad blocking can also be enabled by providing a domain blocklist in `BLOCK`, for example: https://small.oisd.nl/domainswild2
 
-[Setup profile](#setup-profile)
+## Easy Setup
 
-[Setup data sources](#setup-data-sources)
+Use the configurator https://dns-conf-ui.vercel.app in **Quick** mode. It will automatically configure your DNS profile
+and perform all required GitHub setup steps.
 
-[GitHub Actions](#github-actions-setup)
+You only need to sign in with GitHub and provide **CLIENT_ID** and **AUTH_SECRET**. More details on where to find these
+values here: [Setup credentials](#setup-credentials)
 
-## Cloudflare vs NextDNS
+## Standard Setup
 
-Both providers have free plans, but there are some limitations
+[Set up credentials](#set-up-credentials)
 
-### Cloudflare limitations
-+ 100 000 DNS requests per day
-+ Ipv4 DNS requests are restricted by the only one IP. But you are free to use other methods: DoH, DoT, Ipv6
-### NextDNS limitations
-+ 300 000 DNS requests per month (still more than enough for personal use)
-+ Slow API speed is restricted by 60 requests per minute. Takes significantly more time for script to save settings
+[Set up profile](#set-up-profile)
+
+[Set up data sources](#set-up-data-sources)
+
+[Set up exclude redirects (optional)](#set-up-exclude-redirects-optional)
+
+[Set up a DNS donor](#set-up-a-dns-donor)
+
+[Multiple profiles setup](#multiple-profiles-setup)
+
+[GitHub Actions setup](#github-actions-setup)
+
+---
+
+## Set up credentials
+
+### NextDNS credentials setup
+
+1) Generate an **API KEY** from https://my.nextdns.io/account and set it as an **environment variable** `AUTH_SECRET`
+
+2) Click on **NextDNS** logo. On the opened page, copy ID from Endpoints section.
+   Set it as **environment variable** `CLIENT_ID`
 
 ### Cloudflare credentials setup
+
 1) After signing up into a **Cloudflare**, navigate to _Zero Trust_ tab and create an account.
-- Free Plan has decent limits, so just choose it.
-- Skip providing payment method step by choosing _Cancel and exit_ (top right corner)
-- Go back to _Zero Trust_ tab
 
 2) Create a **Cloudflare API token**, from https://dash.cloudflare.com/profile/api-tokens
 
@@ -48,23 +78,24 @@ Set API token to **environment variable** `AUTH_SECRET`
 
 Set **Account ID** to **environment variable** `CLIENT_ID`
 
-### NextDNS credentials setup
-1) Generate **API KEY**, from https://my.nextdns.io/account and set as **environment variable** `AUTH_SECRET`
+---
 
-2) Click on **NextDNS** logo. On the opened page, copy ID from Endpoints section.
-   Set it as **environment variable** `CLIENT_ID`
+## Set up profile
 
-
-## Setup profile
 Set **environment variable** `DNS` with DNS provider name (**Cloudflare** or **NextDNS**)
 
-## Setup data sources
-Each data source must be a link to a hosts file, e.g. https://raw.githubusercontent.com/Internet-Helper/GeoHideDNS/refs/heads/main/hosts/hosts
+---
+
+## Set up data sources
+
+Each data source must be a link to a hosts file,
+e.g. https://raw.githubusercontent.com/Internet-Helper/GeoHideDNS/refs/heads/main/hosts/hosts
 
 You can provide multiple sources split by coma:
 https://first.com/hosts,https://second.com/hosts
 
-### 1) Setup Redirects
+### 1) Set up Redirects
+
 Set sources to **environment variable** `REDIRECT`
 
 Script will parse sources, filtering out redirects to `0.0.0.0` and `127.0.0.1`
@@ -77,52 +108,132 @@ Thus, parsing lines:
 
 will keep only `1.2.3.4 domain.to.redirect` for the further redirect processing.
 
-
 + Redirect priority follows sources order. If domain appears more than one time, the first only IP will be applied.
 
+### 2) Set up Blocklist
 
-### 2) Setup Blocklist
 Set sources to **environment variable** `BLOCK`
 
-Script will parse sources, keeping only redirects to `0.0.0.0` and `127.0.0.1`.
+Script will parse sources, keeping only redirects to `0.0.0.0`, `127.0.0.1`, `::1`, and also lines containing domain
+only.
 
 Thus, parsing lines
 
-    0.0.0.0 domain.to.block
     1.2.3.4 domain.to.redirect
+    0.0.0.0 domain.to.block
     127.0.0.1 another.to.block
+    ::1 ipv6.to.block
+    no-ip.just.domain
 
-will keep only `domain.to.block` and `another.to.block` for the further block processing.
+will keep only
+
+    domain.to.block
+    another.to.block
+    no-ip.just.domain
+    ipv6.to.block
+
+for the further block processing.
 
 + You may want to provide the same source for both `BLOCK` and `REDIRECT` for **Cloudflare**.
-+ For **NextDNS**, the best option might be to set `REDIRECT` only, and then manually choose any blocklists at the _Privacy_ tab.
++ For **NextDNS**, the best option might be to set `REDIRECT` only, and then manually choose any blocklists at the
+  _Privacy_ tab.
 
-## Script Behaviour
+---
+
+## Set up exclude redirects (optional)
+
+Put domains to **environment variable** `EXCLUDE_REDIRECT` separated by coma, e.g. `instagram.com,twitch.com`
+
+These domains and their subdomains:
+
+- will be removed from existing redirect rules;
+- won't be added with new ones.
+
+---
+
+## Set up a DNS donor
+
+If IP addresses of domains are outdated, they can be updated via "donor" DNS. You need:
+
+1) Create **environment variable** `DONOR_DNS`
+2) Provide the **DNS-provider** that will be used as a **donor**.
+   Use one of the following formats:
+
+- **IPv4** (e.g. `111.88.96.50`)
+- **DoH** (e.g. `https://xbox-dns.ru/dns-query`)
+
+For instance, if your hosts-file supplies following:
+
+    1.2.3.4 domain-1.to.redirect
+    1.2.3.4 domain-2.to.redirect
+    1.2.3.4 domain-3.to.redirect
+
+Then, a `DONOR_DNS` value will be called for each domain, fetching new IP addresses:
+
+    5.6.7.8 domain-1.to.redirect
+    2.3.4.5 domain-2.to.redirect
+    9.8.7.6 domain-3.to.redirect
+
+Thus, the new IPs will be used for the further redirect rules upload process.
+
+---
+
+## Multiple profiles setup
+
+### Restrictions
+
+All profiles get _similar_ settings. That means `BLOCK`, `REDIRECT` and `EXCLUDE_REDIRECT` are **shared**.
+
+### Multiple profiles of single provider
+
+Put your profiles separated by coma into related **environment variables**.
+E.g., two NextDNS profiles must be set as shown:
+
+- `AUTH_SECRET` has: `secret_NextDns_1,secret_NextDns_2`
+- `CLIENT_ID` has `client_id_NextDns_1,client_id_NextDns_2`
+
+### Multiple profiles of different providers
+
+In addition to setting above, list provider for each profile in **environment variable** `DNS`. For example:
+
+- `DNS` has: `NEXTDNS,CLOUDFLARE,NEXTDNS`
+- `AUTH_SECRET` has: `secret_NextDns_1,secret_Cloudflare_1,secret_NextDns_2`
+- `CLIENT_ID` has `client_id_NextDns_1,client_id_Cloudflare_1,client_id_NextDns_2`
+
+---
+
+## Script Behavior
+
 ### Cloudflare
-Previously generated data will be removed. Script recognizes old data by marks:
 
+Previously generated data will be removed. Script recognizes old data by marks:
 
 + Name prefix for List: **_Blocked websites by script_** and **_Override websites by script_**
 + Name prefix for Rule: **_Rules set by script_**
 + Different **_Session id_**. **_Session id_** is stored in a description field.
 
-
 After removing old data, new lists and rules will be generated and applied.
 
-If you want to clear **Cloudflare** block/redirect settings, launch the script without providing sources in related **environment variables**. E.g. providing no value for **environment variable** `BLOCK` will cause removing old related data: lists and rules used to setup blocks.
+If you want to clear **Cloudflare** block/redirect settings, launch the script without providing sources in related *
+*environment variables**. E.g. providing no value for **environment variable** `BLOCK` will cause removing old related
+data: lists and rules used to set up blocks.
 
 ### NextDNS
 
 For `REDIRECT`:
+
 + Existing domain will be updated if redirect IP has changed
 + If new domains are provided, they will be added
 + The rest redirect settings are kept untouched
 
 For `BLOCK`:
+
 + If new domains are provided, they will be added
 + The rest block settings are kept untouched
 
 Previously generated data is removed **ONLY** when both `BLOCK` and `REDIRECT` sources were not provided.
+
+---
 
 ## GitHub Actions setup
 
@@ -134,7 +245,28 @@ Previously generated data is removed **ONLY** when both `BLOCK` and `REDIRECT` s
 2) Go _Settings_ => _Environments_
 3) Create _New environment_ with name `DNS`
 4) Provide `AUTH_SECRET` and `CLIENT_ID` to **Environment secrets**
-5) Provide `DNS`,`REDIRECT` and `BLOCK` to **Environment variables**
+5) Provide `DNS`,`REDIRECT`, `BLOCK` and `EXCLUDE_REDIRECT` to **Environment variables**
 
-+ The action will be launched every day at **01:30 UTC**. To set another time, change cron at `.github/workflows/github_action.yml`
-+ You can run the action manually via `Run workflow` button: switch to _Actions_ tab and choose workflow named **DNS Block&Redirect Configurer cron task**
++ The action will be executed every day at **01:30 UTC**. To set another time, change cron at
+  `.github/workflows/github_action.yml`
++ You can run the action manually via `Run workflow` button: switch to _Actions_ tab and choose workflow named **DNS
+  Block&Redirect Configurer cron task**
+
+---
+
+## Keep the action running
+
+GitHub disables scheduled workflows in a public repository
+[when there is no repository activity for 60 days](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+A fork is a public repository, and runs of the action are not counted as activity, so the action stops on its own about
+two months after the setup.
+
+**How to check:** open the _Actions_ tab. A disabled workflow is marked with a notice that scheduled runs are turned off.
+The badge at the top of your fork readme also shows the result of the last run and its date.
+
+**How to turn it on again:** _Actions_ tab => workflow **DNS Block&Redirect Configurer cron task** => **Enable
+workflow**. Going through the configurator https://dns-conf-ui.vercel.app again enables the workflow as well.
+
+Keep in mind that redirect IPs change over time, so a fork that has been disabled for a long time holds outdated rules
+until the next successful run.
+
